@@ -4,7 +4,7 @@ import argparse
 import logging
 import json
 from scapy.all import sniff, Raw, IP, TCP, UDP, DNS, DNSQR
-from scapy.layers.http import HTTPRequest, HTTPResponse
+from scapy.layers.http import HTTPRequest
 
 def get_interface():
     parser = argparse.ArgumentParser()
@@ -73,7 +73,7 @@ def process_packet(packet, output_file, verbose):
                 with open(output_file, 'a') as f:
                     f.write(json.dumps(output) + "\n")
 
-        if packet.haslayer(DNS) and packet.getlayer(DNS).qr == 0:  # DNS query
+        elif packet.haslayer(DNS) and packet.getlayer(DNS).qr == 0:
             if IP in packet:
                 src_ip = packet[IP].src
                 dst_ip = packet[IP].dst
@@ -97,6 +97,49 @@ def process_packet(packet, output_file, verbose):
             if output_file:
                 with open(output_file, 'a') as f:
                     f.write(json.dumps(output) + "\n")
+
+        elif UDP in packet:
+            src_ip = packet[IP].src if IP in packet else "Unknown"
+            dst_ip = packet[IP].dst if IP in packet else "Unknown"
+            protocol = "UDP"
+
+            output = {
+                "src_ip": src_ip,
+                "dst_ip": dst_ip,
+                "protocol": protocol
+            }
+
+            if verbose:
+                print(f"\n[+] UDP Packet:")
+                print(f"    - Source IP: {src_ip}")
+                print(f"    - Destination IP: {dst_ip}")
+
+            if output_file:
+                with open(output_file, 'a') as f:
+                    f.write(json.dumps(output) + "\n")
+
+        elif TCP in packet:
+            src_ip = packet[IP].src if IP in packet else "Unknown"
+            dst_ip = packet[IP].dst if IP in packet else "Unknown"
+            protocol = "TCP"
+
+            output = {
+                "src_ip": src_ip,
+                "dst_ip": dst_ip,
+                "protocol": protocol
+            }
+
+            if verbose:
+                print(f"\n[+] TCP Packet:")
+                print(f"    - Source IP: {src_ip}")
+                print(f"    - Destination IP: {dst_ip}")
+
+            if output_file:
+                with open(output_file, 'a') as f:
+                    f.write(json.dumps(output) + "\n")
+
+        else:
+            logging.warning(f"Unhandled packet: {packet.summary()}")
 
     except Exception as e:
         logging.error(f"Error processing packet: {str(e)}")
